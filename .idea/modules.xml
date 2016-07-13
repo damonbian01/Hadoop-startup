@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/hadoop-hdfs/hadoop-hdfs.iml" filepath="$PROJECT_DIR$/hadoop-hdfs/hadoop-hdfs.iml" />
       <module fileurl="file://$PROJECT_DIR$/hadoop-mapreduce/hadoop-mapreduce.iml" filepath="$PROJECT_DIR$/hadoop-mapreduce/hadoop-mapreduce.iml" />
+      <module fileurl="file://$PROJECT_DIR$/hadoop-paper/hadoop-paper.iml" filepath="$PROJECT_DIR$/hadoop-paper/hadoop-paper.iml" />
       <module fileurl="file://$PROJECT_DIR$/hadoop-startup.iml" filepath="$PROJECT_DIR$/hadoop-startup.iml" />
     </modules>
   </component>

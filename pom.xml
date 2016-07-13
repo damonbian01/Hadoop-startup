@@ -8,6 +8,7 @@
   <modules>
     <module>hadoop-hdfs</module>
     <module>hadoop-mapreduce</module>
+    <module>hadoop-paper</module>
   </modules>
   <packaging>pom</packaging>
 
