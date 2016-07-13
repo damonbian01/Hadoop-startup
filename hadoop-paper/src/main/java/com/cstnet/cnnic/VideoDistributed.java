@@ -1,6 +1,7 @@
 package com.cstnet.cnnic;
 
 import com.cstnet.cnnic.util.Assert;
+import com.cstnet.cnnic.util.FileUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -60,19 +61,6 @@ public class VideoDistributed extends Configured implements Tool {
         System.out.println(stringBuffer.toString());
     }
 
-    /**
-     * 根据输入文件(文件每行代表一个文件的hdfs地址)
-     * 根据大小排序纪录
-     * @param file
-     * @param split 计划的map数量
-     * Point1:
-     * 尽量每个map中size加起来的和相差最小
-     */
-    private void sortRecordsBySize(String file, int split) {
-        LOG.info("sort records by their size");
-
-    }
-
     public int run(String[] strings) throws Exception {
         if (Assert.isEmpty(strings) || strings.length != 3) {
             printUsage();
@@ -96,7 +84,7 @@ public class VideoDistributed extends Configured implements Tool {
         if (command.equals("batch")) {
             LOG.info(String.format("command is batch; input file is %s; output is %s", input, output));
             if (conf.getInt(SORT, 1) == 1) {
-                sortRecordsBySize(input, conf.getInt(NLINES, DEFAULT_NLINES));
+                FileUtil.sortRecordsBySize(LOG, conf, input, conf.getInt(NLINES, DEFAULT_NLINES));
             }
             System.exit(0);
         } else {
