@@ -22,7 +22,7 @@ public class FileUtil {
      * Point1:
      * 尽量每个map中size加起来的和相差最小
      */
-    public static boolean sortRecordsBySize(Log LOG, Configuration conf, String file, int split) throws IOException {
+    public static void sortRecordsBySize(Log LOG, Configuration conf, String file, int split) throws IOException {
         LOG.info("sort records by their size");
         Set<String> files = readFsFile(LOG, conf, file);
         Map<String, Long> map = new HashMap<String, Long>();
@@ -31,7 +31,24 @@ public class FileUtil {
         }
         List<String> sortFiles = lenSort(LOG, conf, map, split);
         writeFsFile(LOG, conf, file, sortFiles);
-        return true;
+    }
+
+    /**
+     * 判断文件是否存在
+     * @param LOG
+     * @param conf
+     * @param file
+     * @return
+     * @throws IOException
+     */
+    public static boolean exists(Log LOG, Configuration conf, String file) throws IOException {
+        Path path = new Path(file);
+        FileSystem fs = FileSystem.get(conf);
+        if (!fs.isFile(path)) {
+            LOG.error(String.format("[%s file not exist]", file));
+            return false;
+        }
+        else return true;
     }
 
     /**

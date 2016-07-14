@@ -35,4 +35,17 @@
             <version>2.6.2</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <!-- include some files to package -->
+        <resources>
+            <resource>
+                <directory>bash</directory>
+                <includes>
+                    <include>run.sh</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+    </build>
 </project>
