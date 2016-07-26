@@ -67,6 +67,7 @@ public class LinesMapper extends Mapper<LongWritable, Text, LongWritable, Text> 
             // 开始执行shell
             String cmds = conf.get(VideoDistributed.SOURCE_PATH);
             LOG.info(String.format("[executable shell is %s]", cmds));
+            super.map(key, value, context);
             return;
         }
         // 执行可执行文件

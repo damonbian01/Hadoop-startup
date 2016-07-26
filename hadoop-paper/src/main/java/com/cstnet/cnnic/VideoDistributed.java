@@ -54,8 +54,8 @@ public class VideoDistributed extends Configured implements Tool {
                 "general options:\n" +
                 "-Dmapreduce.input.lineinputformat.linespermap=2 (default:2)\n" +
                 "-Dmapred.reduce.tasks=1\t\t(default:1)\n" +
-                "-Dcnic.sort=0\t\t\t\t(default:1) sort the records of file by their size, (1 sort 0 not)\n" +
-                "-Dcnic.mode=shell\t\t\t(default:shell) shell|file,file is a runnable script\n" +
+                "-Dcnic.sort=0\t\t\t(default:1) sort the records of file by their size, (1 sort 0 not)\n" +
+                "-Dcnic.mode=shell\t\t(default:shell) shell|file,file is a runnable script\n" +
                 "-Dcnic.source=hdfs_path\t\tmode is file, source is hdfs path; mode is shell, source is shell\n" +
                 "-D etc..." +
                 "\n\n" +
@@ -118,7 +118,7 @@ public class VideoDistributed extends Configured implements Tool {
             System.exit(0);
         }
         if (!conf.get(EXE_MODE).equals(DEFAULT_EXE_MODE)) {
-            if (!FileUtil.exists(LOG, conf, conf.get(SOURCE_PATH))) {
+            if (!FileUtil.exists(conf, conf.get(SOURCE_PATH))) {
                 LOG.error("input execute source code is not a exist file, program exist");
                 printUsage();
                 System.exit(0);
@@ -137,9 +137,10 @@ public class VideoDistributed extends Configured implements Tool {
         String output = strings[1];
         LOG.info(String.format("command is file; input file is %s; output is %s", input, output));
         // 如果需要对视频大小排序,排序重写文件
-        if (conf.getInt(SORT, 1) == 1) {
+        String sort_input = null;
+        if (conf.getInt(SORT, 0) == 1) {
             try {
-                FileUtil.sortRecordsBySize(LOG, conf, input, conf.getInt(NLINES, DEFAULT_NLINES));
+                sort_input = FileUtil.sortRecordsBySize(conf, input, conf.getInt(NLINES, DEFAULT_NLINES));
             } catch (Exception e) {
                 LOG.error("error:sort records, program exist");
                 e.printStackTrace();
@@ -147,7 +148,7 @@ public class VideoDistributed extends Configured implements Tool {
             }
         }
         // start to submit mr job
-        int ret = submitVideoJob(conf, input, output);
+        int ret = submitVideoJob(conf, sort_input == null ? input : sort_input, output);
         System.exit(ret);
         return 0;
     }

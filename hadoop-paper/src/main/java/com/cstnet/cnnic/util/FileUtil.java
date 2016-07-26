@@ -1,6 +1,7 @@
 package com.cstnet.cnnic.util;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IOUtils;
@@ -12,6 +13,7 @@ import java.util.*;
  * Created by biantao on 16/7/13.
  */
 public class FileUtil {
+    public static final Log LOG = LogFactory.getLog(FileUtil.class);
     public static final String SEP = "\n";
 
     /**
@@ -21,27 +23,27 @@ public class FileUtil {
      * @param split 计划的map数量
      * Point1:
      * 尽量每个map中size加起来的和相差最小
+     * @return 返回重排序后文件对地址
      */
-    public static void sortRecordsBySize(Log LOG, Configuration conf, String file, int split) throws IOException {
+    public static String sortRecordsBySize(Configuration conf, String file, int split) throws IOException {
         LOG.info("sort records by their size");
-        Set<String> files = readFsFile(LOG, conf, file);
+        Set<String> files = readFsFile(conf, file);
         Map<String, Long> map = new HashMap<String, Long>();
         for (String f : files) {
-            map.putAll(processFile(LOG,conf,f));
+            map.putAll(processFile(conf,f));
         }
-        List<String> sortFiles = lenSort(LOG, conf, map, split);
-        writeFsFile(LOG, conf, file, sortFiles);
+        List<String> sortFiles = lenSort(conf, map, split);
+        return writeFsFile(conf, file, sortFiles);
     }
 
     /**
      * 判断文件是否存在
-     * @param LOG
      * @param conf
      * @param file
      * @return
      * @throws IOException
      */
-    public static boolean exists(Log LOG, Configuration conf, String file) throws IOException {
+    public static boolean exists(Configuration conf, String file) throws IOException {
         Path path = new Path(file);
         FileSystem fs = FileSystem.get(conf);
         if (!fs.isFile(path)) {
@@ -53,13 +55,12 @@ public class FileUtil {
 
     /**
      * 读取文件内容,封装到Set中返回
-     * @param LOG
      * @param conf
      * @param file
      * @return
      * @throws IOException
      */
-    public static Set<String> readFsFile(Log LOG, Configuration conf, String file) throws IOException {
+    public static Set<String> readFsFile(Configuration conf, String file) throws IOException {
         Set<String> files = new HashSet<String>();
         Path path = new Path(file);
         FileSystem fs = FileSystem.get(conf);
@@ -80,11 +81,11 @@ public class FileUtil {
 
     /**
      * 将排序后的文件重写到hfds,文件名为sort_file(即加上前缀sort_)
-     * @param LOG
      * @param conf
      * @param file
+     * @return 返回新保存的文件名
      */
-    public static void writeFsFile(Log LOG, Configuration conf, String file, List<String> content) throws IOException {
+    public static String writeFsFile(Configuration conf, String file, List<String> content) throws IOException {
         Path prePath = new Path(file);
         Path path = new Path(prePath.getParent(), "sort_" + prePath.getName());
         FileSystem fs = FileSystem.get(conf);
@@ -102,18 +103,18 @@ public class FileUtil {
         fout.write(stringBuffer.toString().getBytes());
         IOUtils.closeStream(fout);
         LOG.info(String.format("sorted records have been witten to %s", path.getParent() + "/" + path.getName()));
+        return path.getParent() + "/" + path.getName();
     }
 
     /**
      * 处理单个文件,返回<文件名, 文件大小>
      * Point2:
      * 如果能根据文件所在的机器就更好了
-     * @param LOG
      * @param conf
      * @param file
      * @return
      */
-    public static Map<String, Long> processFile(Log LOG, Configuration conf, String file) throws IOException {
+    public static Map<String, Long> processFile(Configuration conf, String file) throws IOException {
         Map<String, Long> map = new HashMap<String, Long>();
         Path path = new Path(file);
         FileSystem fs = FileSystem.get(conf);
@@ -132,12 +133,11 @@ public class FileUtil {
     /**
      * TODO
      * 自定义排序算法,根据split和文件大小衡量
-     * @param LOG
      * @param conf
      * @param files
      * @param split
      */
-    public static List<String> lenSort(Log LOG, Configuration conf, Map<String, Long> files, int split) {
+    public static List<String> lenSort(Configuration conf, Map<String, Long> files, int split) {
         LOG.info("lenSort a key point in the algorithm");
         List<String> list = new ArrayList<String>();
         list.addAll(files.keySet());
