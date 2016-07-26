@@ -27,6 +27,8 @@ import java.io.IOException;
 public class VideoDistributed extends Configured implements Tool {
     public static final Log LOG = LogFactory.getLog(VideoDistributed.class);
     // default params
+    public static final String EXE_MODE = "cnic.mode";
+    public static final String DEFAULT_EXE_MODE = "shell";
     private static final String NLINES = "mapreduce.input.lineinputformat.linespermap";
     private static final int DEFAULT_NLINES = 2;
     private static final String NREDUCER = "mapred.reduce.tasks";
@@ -47,18 +49,15 @@ public class VideoDistributed extends Configured implements Tool {
 
     private static void printUsage() {
         StringBuffer stringBuffer = new StringBuffer();
-        stringBuffer.append("Usage: VideoDistributed [-options] <command> [args...]\n" +
+        stringBuffer.append("Usage: VideoDistributed [-options] [args...]\n" +
                 "\n" +
                 "general options:\n" +
                 "-Dmapreduce.input.lineinputformat.linespermap=2 (default:2)\n" +
-                "-Dmapred.reduce.tasks=1 (default:1)\n" +
+                "-Dmapred.reduce.tasks=1\t\t(default:1)\n" +
                 "-Dcnic.sort=0\t\t\t\t(default:1) sort the records of file by their size, (1 sort 0 not)\n" +
-                "-Dcnic.source=hdfs_path\t\t\t\n" +
+                "-Dcnic.mode=shell\t\t\t(default:shell) shell|file,file is a runnable script\n" +
+                "-Dcnic.source=hdfs_path\t\tmode is file, source is hdfs path; mode is shell, source is shell\n" +
                 "-D etc..." +
-                "\n\n" +
-                "commands:\n" +
-                "batch\t\t\t\tprocess some videos at the same time\n" +
-                "single\t\t\t\tprocess a single video at the same time" +
                 "\n\n" +
                 "args:\n" +
                 "inputpath\t\t\tinput files\n" +
@@ -67,8 +66,8 @@ public class VideoDistributed extends Configured implements Tool {
                 "example:" +
                 "hadoop jar hadoop-paper-1.0-SNAPSHOT.jar com.cstnet.cnnic.VideoDistributed -Dmapreduce.input.lineinputformat.linespermap=2 " +
                 "-Dmapred.reduce.tasks=1 " +
+                "-Dcnic.mode=file " +
                 "-Dcnic.source=hdfs_path " +
-                "batch " +
                 "hdfs:* " +
                 "hdfs:*\n");
         System.out.println(stringBuffer.toString());
@@ -76,10 +75,10 @@ public class VideoDistributed extends Configured implements Tool {
 
     /**
      * 真实的提交job
+     *
      * @param conf
-     * @param args
-     * 0:输入文件地址,排序后的文件地址
-     * 1:输出文件地址,无用信息,并非处理视频后的地址
+     * @param args 0:输入文件地址,排序后的文件地址
+     *             1:输出文件地址,无用信息,并非处理视频后的地址
      * @return
      * @throws IOException
      * @throws ClassNotFoundException
@@ -87,7 +86,7 @@ public class VideoDistributed extends Configured implements Tool {
      */
     public int submitVideoJob(Configuration conf, String... args) throws IOException, ClassNotFoundException, InterruptedException {
         LOG.info("submit video job...");
-        Job job = new Job(conf,"VideoDistributed");
+        Job job = new Job(conf, "VideoDistributed");
         job.setNumReduceTasks(DEFAULT_NREDUCER);
         job.setJarByClass(VideoDistributed.class);
         job.setMapperClass(LinesMapper.class);
@@ -101,18 +100,29 @@ public class VideoDistributed extends Configured implements Tool {
     }
 
     public int run(String[] strings) throws Exception {
-        if (Assert.isEmpty(strings) || strings.length != 3) {
+        if (Assert.isEmpty(strings) || strings.length != 2) {
             printUsage();
             System.exit(0);
         }
 
         Configuration conf = getConf();
+        // 首先判断执行模式,是shell还是可执行脚本
+        String mode = conf.get(EXE_MODE);
+        if (Assert.isEmpty(mode) || !(mode.equals(DEFAULT_EXE_MODE) || mode.equals("file"))) {
+            conf.set(EXE_MODE, DEFAULT_EXE_MODE);
+            LOG.error("cnic.mode is not set, use default mode shell");
+        }
         if (Assert.isEmpty(conf.get(SOURCE_PATH))) {
             LOG.error("execute source code is not set, program exist");
+            printUsage();
             System.exit(0);
-        } else if(!FileUtil.exists(LOG, conf, conf.get(SOURCE_PATH))) {
-            LOG.error("input execute source code is not a exist file, program exist");
-            System.exit(0);
+        }
+        if (!conf.get(EXE_MODE).equals(DEFAULT_EXE_MODE)) {
+            if (!FileUtil.exists(LOG, conf, conf.get(SOURCE_PATH))) {
+                LOG.error("input execute source code is not a exist file, program exist");
+                printUsage();
+                System.exit(0);
+            }
         }
         if (Assert.isEmpty(conf.get(NLINES))) {
             conf.setInt(NLINES, DEFAULT_NLINES);
@@ -123,24 +133,19 @@ public class VideoDistributed extends Configured implements Tool {
             LOG.info(String.format("%s not set, use default %s", NREDUCER, DEFAULT_NREDUCER));
         }
         LOG.info("parse command and options");
-        String command = strings[0];
-        String input = strings[1];
-        String output = strings[2];
-        if (command.equals("batch")) {
-            LOG.info(String.format("command is batch; input file is %s; output is %s", input, output));
-            if (conf.getInt(SORT, 1) == 1) {
-                try {
-                    FileUtil.sortRecordsBySize(LOG, conf, input, conf.getInt(NLINES, DEFAULT_NLINES));
-                } catch (Exception e) {
-                    LOG.error("error:sort records, program exist");
-                    e.printStackTrace();
-                    System.exit(0);
-                }
+        String input = strings[0];
+        String output = strings[1];
+        LOG.info(String.format("command is file; input file is %s; output is %s", input, output));
+        // 如果需要对视频大小排序,排序重写文件
+        if (conf.getInt(SORT, 1) == 1) {
+            try {
+                FileUtil.sortRecordsBySize(LOG, conf, input, conf.getInt(NLINES, DEFAULT_NLINES));
+            } catch (Exception e) {
+                LOG.error("error:sort records, program exist");
+                e.printStackTrace();
+                System.exit(0);
             }
-        } else {
-            LOG.info(String.format("command %s is wrong or not implement this command"));
         }
-
         // start to submit mr job
         int ret = submitVideoJob(conf, input, output);
         System.exit(ret);

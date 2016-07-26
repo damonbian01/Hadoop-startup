@@ -35,6 +35,13 @@ public class LinesMapper extends Mapper<LongWritable, Text, LongWritable, Text> 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         Configuration conf = context.getConfiguration();
+        // 根据执行模式判断是可执行文件还是shell
+        String mode = conf.get(VideoDistributed.EXE_MODE);
+        if (mode.equals(VideoDistributed.DEFAULT_EXE_MODE)) {
+            LOG.info("[current running mode is shell]");
+            return;
+        }
+        // 如果是可执行文件模式,则需要将文件下拉倒本地执行
         String codePath = conf.get(VideoDistributed.SOURCE_PATH);
         File path = new File(localDir);
         if (!path.exists()) {
@@ -54,6 +61,15 @@ public class LinesMapper extends Mapper<LongWritable, Text, LongWritable, Text> 
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        Configuration conf = context.getConfiguration();
+        String mode = conf.get(VideoDistributed.EXE_MODE);
+        if (mode.equals(VideoDistributed.DEFAULT_EXE_MODE)) {
+            // 开始执行shell
+            String cmds = conf.get(VideoDistributed.SOURCE_PATH);
+            LOG.info(String.format("[executable shell is %s]", cmds));
+            return;
+        }
+        // 执行可执行文件
         File file = new File(currentCodePath);
         LOG.info(String.format("[run.sh path is : %s]", currentCodePath));
         String[] cmds = {"sh", currentCodePath};
